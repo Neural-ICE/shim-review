@@ -56,19 +56,24 @@ presence per unit, which violates the appliance's zero-touch requirement.
 
 ### Who is the primary contact for security updates, etc.?
 
-- Name: `[TODO]`
-- Position: `[TODO]`
-- Email address: `[TODO: monitored role or personal address]`
-- PGP key fingerprint: `[TODO]`
-- File/keyserver location: keyserver.ubuntu.com + `<name>.asc` in this repo
+- Name: Thomas Kristner
+- Position: Founder / maintainer, TKRI (Neural ICE)
+- Email address: security@neural-ice.ch
+- PGP key fingerprint: D17C 8C29 7D5A 6B37 3F27  5452 225A DCD5 E31E BE24
+- File/keyserver location: keyserver.ubuntu.com + `neural-ice-security.asc` in this repo
 
 ### Who is the secondary contact for security updates, etc.?
 
-- Name: `[TODO: second distinct person — required]`
-- Position: `[TODO]`
-- Email address: `[TODO]`
-- PGP key fingerprint: `[TODO]`
-- File/keyserver location: keyserver.ubuntu.com + `<name>.asc` in this repo
+Note: TKRI is a single-maintainer company. To ensure a security report can
+always be received even if one mailbox is unavailable, the second contact is
+a separate, independently-hosted mailbox and PGP key held by the same
+maintainer. Both are monitored long-term.
+
+- Name: Thomas Kristner
+- Position: Founder / maintainer, TKRI (Neural ICE)
+- Email address: t.kristner@protonmail.ch
+- PGP key fingerprint: 9245 E2C1 691B C6DC F488  3AF6 ACB0 E52D 0FC6 3AB5
+- File/keyserver location: keyserver.ubuntu.com + `t-kristner-proton.asc` in this repo
 
 ### Were these binaries created from the 16.1 shim release tar?
 
