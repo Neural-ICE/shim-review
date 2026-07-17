@@ -122,9 +122,10 @@ marker for the February 2025 CVE batch — confirming those fixes are present.
 
 ### If shim is loading GRUB2 bootloader, and if these fixes have been applied, is the upstream global SBAT generation in your GRUB2 binary set to 5?
 
-Yes: `grub,5,Free Software Foundation,grub,2.12,https://www.gnu.org/software/grub/`
-— this is the real entry dumped from our final signed `grubaa64.efi` (full SBAT
-listing below).
+Yes: `grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub/`
+— this is the real entry dumped verbatim from our final signed `grubaa64.efi`
+(the missing colon in `https//` is present as-is in the CentOS Stream 10
+`sbat.csv.in`; we did not alter it). Full SBAT listing below.
 
 ### Were old shims hashes provided to Microsoft for verification and to be added to future DBX updates? Does your new chain of trust disallow booting old GRUB2 builds affected by the CVEs?
 
