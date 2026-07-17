@@ -311,8 +311,17 @@ enablement patches only; no Secure Boot-related modifications.
 
 ### What contributions have you made to help us review the applications of other applicants?
 
-`[TODO: start reviewing issues labeled "easy to review" NOW and list them
-here — this is the main lever on our own review latency.]`
+We have contributed independent community reviews of other open submissions,
+each based on reproducing the build ourselves and inspecting the actual
+binaries/certificates (we only assert what we verified, and clearly separate
+that from submitter statements we could not check):
+
+- NComputing LEAFOS shim-16.1 (#569):
+  <https://github.com/rhboot/shim-review/issues/569#issuecomment-5004983882>
+- Tavashtr OS shim-16.1 (#570):
+  <https://github.com/rhboot/shim-review/issues/570#issuecomment-5006116769>
+
+We intend to keep reviewing open submissions while ours is in the queue.
 
 ### Add any additional information you think we may need to validate this shim signing application.
 
