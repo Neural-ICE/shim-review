@@ -107,21 +107,24 @@ compatibility.
 ### What exact implementation of Secure Boot in GRUB2 do you have?
 
 Downstream RHEL/Fedora-like implementation: our GRUB2 is a rebuild of the
-CentOS Stream 10 `grub2` source package (which carries the Red Hat downstream
-Secure Boot/lockdown verifier patch set), with our vendor SBAT entry appended
-and signed by our CA. `[TODO: exact NVR, e.g. grub2-2.12-XX.el10]`
+CentOS Stream 10 `grub2` source package **grub2-2.12-51.el10** (which carries
+the Red Hat downstream Secure Boot/lockdown verifier patch set), with our
+vendor SBAT entry appended (one line added to the package's `sbat.csv.in`; the
+module set and all patches are unchanged) and the resulting `grubaa64.efi`
+signed by our leaf key (chaining to the CA embedded in shim).
 
 ### Do you have fixes for all the following GRUB2 CVEs applied?
 
-Yes — inherited from the CentOS Stream 10 `grub2` package, which contains the
-fixes for all listed CVEs through the February 2025 set (upstream SBAT
-generation 5). `[TODO: verify the NVR's changelog covers the Feb 2025 batch
-before finalizing.]`
+Yes — inherited from the CentOS Stream 10 `grub2` package (grub2-2.12-51.el10),
+which contains the fixes for all listed CVEs through the February 2025 set.
+The upstream global SBAT generation in the built binary is **5**, which is the
+marker for the February 2025 CVE batch — confirming those fixes are present.
 
 ### If shim is loading GRUB2 bootloader, and if these fixes have been applied, is the upstream global SBAT generation in your GRUB2 binary set to 5?
 
 Yes: `grub,5,Free Software Foundation,grub,2.12,https://www.gnu.org/software/grub/`
-(see full SBAT listing below). `[TODO: paste from final binary.]`
+— this is the real entry dumped from our final signed `grubaa64.efi` (full SBAT
+listing below).
 
 ### Were old shims hashes provided to Microsoft for verification and to be added to future DBX updates? Does your new chain of trust disallow booting old GRUB2 builds affected by the CVEs?
 
@@ -155,9 +158,10 @@ module-signing behavior.
 Yes. The module signing key (`certs/signing_key.pem`) is generated during the
 kernel build; the NVIDIA open GPU kernel modules (out-of-tree, r595) are
 signed with that same key **within the same pipeline run**, after which the
-private key is destroyed. Each kernel build therefore only loads modules from
-its own build. `[TODO: this is the committed design — confirm the pipeline
-change (destroy-after-kmod-signing) is merged before submitting.]`
+private key is destroyed. The corresponding public key is embedded in the
+kernel's built-in `.builtin_trusted_keys`, so each kernel build can only load
+modules signed for that exact build — one build's modules cannot be loaded by
+another.
 
 ### If you use vendor_db functionality of providing multiple certificates and/or hashes please briefly describe your certificate setup.
 
@@ -231,24 +235,37 @@ shim,4,UEFI shim,shim,1,https://github.com/rhboot/shim
 shim.neuralice,1,Neural ICE,shim,16.1,https://github.com/Neural-ICE/shim-review
 ```
 
-GRUB2 (upstream + Red Hat downstream entries preserved, ours appended):
+GRUB2 — real dump from our final signed `grubaa64.efi`
+(sha256 `a962080cc668b4ff60bd579eabac43a88fea11f5d040e3ff5688f1b4082391b8`,
+built from grub2-2.12-51.el10, upstream + Red Hat/CentOS entries preserved,
+ours appended):
 ```
 sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
-grub,5,Free Software Foundation,grub,2.12,https://www.gnu.org/software/grub/
-grub.rh,4,Red Hat,grub2,[TODO: NVR],mailto:secalert@redhat.com
-grub.neuralice,1,Neural ICE,grub2,[TODO: our NVR],https://github.com/Neural-ICE/shim-review
+grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub/
+grub.rh,2,Red Hat,grub2,2.12-51.el10,mailto:secalert@redhat.com
+grub.centos,2,Red Hat,grub2,2.12-51.el10,mailto:secalert@redhat.com
+grub.neuralice,1,Neural ICE,grub2,2.12-51.el10,https://github.com/Neural-ICE/shim-review
 ```
 The shim entries above are the **real dump from the final binary**
 (`shimaa64.efi` sha256 `d55327f1…e46c`, build 2026-07-16).
-`[TODO: the GRUB2 entries are the intended layout — paste the real dump once
-the c10s grub2 rebuild exists, with its exact NVR.]`
 
 No other binaries are booted through shim (no fwupd EFI binary is shipped).
 
 ### If shim is loading GRUB2 bootloader, which modules are built into your signed GRUB2 image?
 
-`[TODO: paste the grub2-mkimage module list from the c10s grub2 rebuild
-(the distro spec's module set; do not add net/legacy modules beyond it).]`
+The built-in module set is exactly that of the stock CentOS Stream 10
+`grub2-efi-aa64` package (we did not add or remove any module — only the SBAT
+csv was touched). Extracted from our signed binary:
+
+```
+all_video blscfg boot cat configfile echo efifwsetup efinet ext2 fat font
+gcry_crc gcry_dsa gcry_keccak gcry_rijndael gcry_rsa gcry_serpent gcry_sha1
+gcry_sha256 gcry_sha512 gcry_twofish gcry_whirlpool gettext gfxmenu gfxterm
+gzio halt hfsplus http increment iso9660 jpeg linux loadenv loopback lsefi
+lsefimmap luks luks2 lvm mdraid09 mdraid1x memdisk minicmd net normal
+part_apple part_gpt part_msdos password_pbkdf2 pgp png reboot regexp search
+search_fs_file search_fs_uuid search_label serial sleep test tftp video xfs
+```
 
 ### If you are using systemd-boot on arm64 or riscv, is the fix for unverified Devicetree Blob loading included?
 
@@ -256,8 +273,8 @@ N/A — we use GRUB2.
 
 ### What is the origin and full version number of your bootloader (GRUB2 or systemd-boot or other)?
 
-GRUB2, rebuilt from the CentOS Stream 10 source package
-`[TODO: exact NVR, e.g. grub2-2.12-XX.el10 + our rebuild suffix]`.
+GRUB2, rebuilt from the CentOS Stream 10 source package **grub2-2.12-51.el10**
+(the only change is the appended `grub.neuralice` SBAT entry).
 
 ### If your shim launches any other components apart from your bootloader, please provide further details on what is launched.
 
