@@ -78,11 +78,13 @@ maintainer. Both are monitored long-term.
 ### Were these binaries created from the 16.1 shim release tar?
 
 Yes. The Dockerfile downloads
-`https://github.com/rhboot/shim/releases/download/16.1/shim-16.1.tar.bz2`,
-verifies SHA256
-`46319cd228d8f2c06c744241c0f342412329a7c630436fce7f82cf6936b1d603` before
-extraction, and we verified the detached PGP signature against Peter Jones's
-key (`B00B48BC731AA8840FED9FB0EED266B70F4FEF10`).
+`https://github.com/rhboot/shim/releases/download/16.1/shim-16.1.tar.bz2`
+and, before extraction, verifies its SHA256
+(`46319cd228d8f2c06c744241c0f342412329a7c630436fce7f82cf6936b1d603`), its
+SHA512, and its detached PGP signature against Peter Jones's release key
+(`pjones.asc` in this repo, fingerprint
+`B00B48BC731AA8840FED9FB0EED266B70F4FEF10`) — the build fails if any of the
+three checks fails.
 
 ### URL for a repo that contains the exact code which was built to result in your binary:
 
@@ -104,7 +106,7 @@ Our boot stack (GRUB2 from CentOS Stream 10, kernel 6.12 aarch64) follows
 current Fedora/CentOS practice, which has not yet declared full NX
 compatibility.
 
-### What exact implementation of Secure Boot in GRUB2 do you have?
+### What exact implementation of Secure Boot in GRUB2 do you have? (Either Upstream GRUB2 shim_lock verifier or Downstream RHEL/Fedora/Debian/Canonical-like implementation)
 
 Downstream RHEL/Fedora-like implementation: our GRUB2 is a rebuild of the
 CentOS Stream 10 `grub2` source package **grub2-2.12-51.el10** (which carries
@@ -127,12 +129,20 @@ Yes: `grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub
 (the missing colon in `https//` is present as-is in the CentOS Stream 10
 `sbat.csv.in`; we did not alter it). Full SBAT listing below.
 
-### Were old shims hashes provided to Microsoft for verification and to be added to future DBX updates? Does your new chain of trust disallow booting old GRUB2 builds affected by the CVEs?
+### Were old shims hashes provided to Microsoft for verification and to be added to future DBX updates?
 
-This is our first application; we have no previously signed shim. Our CA is
-new, so no older GRUB2 build was ever signed by it.
+This is our first application; we have no previously signed shim, so there are
+no old shim hashes to provide.
 
-### If your boot chain of trust includes a Linux kernel: are upstream commits 1957a85b / 75b0cea7 / eadb2f47 applied?
+### Does your new chain of trust disallow booting old GRUB2 builds affected by the CVEs?
+
+Yes. Our CA is new, so no GRUB2 build affected by the CVEs was ever signed by
+it — nothing older exists that could boot under this chain.
+
+### If your boot chain of trust includes a Linux kernel:
+### Is upstream commit [1957a85b0032a81e6482ca4aab883643b8dae06e "efi: Restrict efivar_ssdt_load when the kernel is locked down"](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=1957a85b0032a81e6482ca4aab883643b8dae06e) applied?
+### Is upstream commit [75b0cea7bf307f362057cc778efe89af4c615354 "ACPI: configfs: Disallow loading ACPI tables when locked down"](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=75b0cea7bf307f362057cc778efe89af4c615354) applied?
+### Is upstream commit [eadb2f47a3ced5c64b23b90fd2a3463f63726066 "lockdown: also lock down previous kgdb use"](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=eadb2f47a3ced5c64b23b90fd2a3463f63726066) applied?
 
 Yes to all three. Our kernel is 6.12-based (el10, Red Hat `nvidia-gb10` tree);
 these commits are upstream since v5.4, v5.8 and v5.19 respectively and are
@@ -164,21 +174,33 @@ kernel's built-in `.builtin_trusted_keys`, so each kernel build can only load
 modules signed for that exact build — one build's modules cannot be loaded by
 another.
 
+### If not, please describe how you ensure that one kernel build does not load modules built for another kernel.
+
+N/A — we do use an ephemeral per-build key (see above).
+
 ### If you use vendor_db functionality of providing multiple certificates and/or hashes please briefly describe your certificate setup.
 
 Not used. A single CA certificate is embedded via `VENDOR_CERT_FILE`; no
 vendor_db, no allow-listed hashes.
 
-### If you are re-using the CA certificate from your last shim binary…
+### If there are allow-listed hashes please provide exact binaries for which hashes are created via file sharing service, available in public with anonymous access for verification.
 
-First application, new CA certificate.
+N/A — no allow-listed hashes are used.
+
+### If you are re-using the CA certificate from your last shim binary, you will need to add the hashes of the previous GRUB2 binaries exposed to the CVEs mentioned earlier to vendor_dbx in shim. Please describe your strategy.
+
+First application, new CA certificate — no previously signed GRUB2 binaries
+exist, so no vendor_dbx entries are needed.
 
 ### Is the Dockerfile in your repository the recipe for reproducing the building of your shim binary?
 
 Yes. `docker build .` (or `podman build`) reproduces the exact binaries: the
 base image is tag-pinned (`debian:12.11`), the toolchain is Debian 12's
-`gcc-aarch64-linux-gnu`, and the shim tarball is checksum-verified. The final
-layer prints the SHA256 of the produced binaries.
+`gcc-aarch64-linux-gnu`, and the shim tarball is verified (SHA256 + SHA512 +
+PGP) before use. The build is self-verifying: the final layer compares the
+rebuilt binaries byte-for-byte (`sha256sum -c`, `cmp` and a full hexdump
+diff) against the binaries submitted in this repo and **fails on any
+mismatch**, so a successful build is itself the reproducibility proof.
 
 ### Which files in this repo are the logs for your build?
 
@@ -207,10 +229,12 @@ f7ffbfca88d49f9043ef98405b9dce9047d2e507a5640358eaeade2668c16bfa  fbaa64.efi
 Two-tier PKI under a documented ceremony
 (<https://github.com/Neural-ICE/ICE-CoreOS/blob/main/secureboot/key-ceremony.md>):
 
-- The **CA private key** was generated on an air-gapped machine and exists
-  only as passphrase-encrypted backups stored in a physical safe under dual
-  control (no single person holds both the media and the passphrase). It is
-  used only to issue leaf signing certificates.
+- The **CA private key** was generated during a documented offline key
+  ceremony (air-gapped live system, RAM-only working directory) and was never
+  written to persistent storage in clear form. It exists only as
+  passphrase-encrypted backups on two offline media kept in separate physical
+  locations, with the passphrase stored on paper separately from both media.
+  It is used only to issue leaf signing certificates.
 - The **leaf signing key** (signs GRUB2 and the kernel) is generated on-device
   in a YubiKey 5 FIPS (FIPS 140-2 overall Level 2, physical Level 3) PIV slot,
   is non-exportable, and requires PIN + touch to operate.
@@ -227,7 +251,8 @@ for the Microsoft submission process).
 Yes, and it carries `X509v3 Basic Constraints: critical, CA:TRUE`
 (plus `keyUsage: critical, keyCertSign, cRLSign, digitalSignature`).
 
-### Do you add a vendor-specific SBAT entry to the SBAT section in each binary that supports SBAT metadata? Please provide the exact SBAT entries for all binaries you are booting directly through shim.
+### Do you add a vendor-specific SBAT entry to the SBAT section in each binary that supports SBAT metadata ( GRUB2, fwupd, fwupdate, systemd-boot, systemd-stub, shim + all child shim binaries )?
+### Please provide the exact SBAT entries for all binaries you are booting directly through shim.
 
 Yes. Shim (`objcopy --only-section .sbat -O binary shimaa64.efi /dev/stdout`):
 ```
@@ -239,7 +264,8 @@ shim.neuralice,1,Neural ICE,shim,16.1,https://github.com/Neural-ICE/shim-review
 GRUB2 — real dump from our final signed `grubaa64.efi`
 (sha256 `a962080cc668b4ff60bd579eabac43a88fea11f5d040e3ff5688f1b4082391b8`,
 built from grub2-2.12-51.el10, upstream + Red Hat/CentOS entries preserved,
-ours appended):
+ours appended; the signed binary itself is included in this repo as
+`grubaa64.efi` so the dump and signature can be verified independently):
 ```
 sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
 grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub/
@@ -268,7 +294,7 @@ part_apple part_gpt part_msdos password_pbkdf2 pgp png reboot regexp search
 search_fs_file search_fs_uuid search_label serial sleep test tftp video xfs
 ```
 
-### If you are using systemd-boot on arm64 or riscv, is the fix for unverified Devicetree Blob loading included?
+### If you are using systemd-boot on arm64 or riscv, is the fix for [unverified Devicetree Blob loading](https://github.com/systemd/systemd/security/advisories/GHSA-6m6p-rjcq-334c) included?
 
 N/A — we use GRUB2.
 
