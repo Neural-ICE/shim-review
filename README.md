@@ -64,16 +64,11 @@ presence per unit, which violates the appliance's zero-touch requirement.
 
 ### Who is the secondary contact for security updates, etc.?
 
-Note: TKRI is a single-maintainer company. To ensure a security report can
-always be received even if one mailbox is unavailable, the second contact is
-a separate, independently-hosted mailbox and PGP key held by the same
-maintainer. Both are monitored long-term.
-
-- Name: Thomas Kristner
-- Position: Founder / maintainer, TKRI (Neural ICE)
-- Email address: t.kristner@protonmail.ch
-- PGP key fingerprint: 9245 E2C1 691B C6DC F488  3AF6 ACB0 E52D 0FC6 3AB5
-- File/keyserver location: keyserver.ubuntu.com + `t-kristner-proton.asc` in this repo
+- Name: Anthony Chevalet
+- Position: Contributor, Neural ICE project (GitHub: [`achevalet`](https://github.com/achevalet), member of the Neural-ICE GitHub organization)
+- Email address: anthony.chevalet@pm.me
+- PGP key fingerprint: B765 BE8B 4E8A 1639 DB05  8233 8BDD E2AF 7E57 4291
+- File/keyserver location: keyserver.ubuntu.com + `anthony-chevalet.asc` in this repo
 
 ### Were these binaries created from the 16.1 shim release tar?
 
@@ -89,7 +84,7 @@ three checks fails.
 ### URL for a repo that contains the exact code which was built to result in your binary:
 
 `https://github.com/Neural-ICE/shim-review` (tag
-`neuralice-shim-aarch64-[TODO: YYYYMMDD]`) — contains the Dockerfile, the
+`neuralice-shim-aarch64-20260722`) — contains the Dockerfile, the
 vendor SBAT csv and the vendor certificate; the shim source itself is the
 unmodified 16.1 release tarball fetched and checksum-verified at build time.
 
