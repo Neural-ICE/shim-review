@@ -4,7 +4,7 @@
 ### What organization or people are asking to have this signed?
 
 Organization name and website:
-**TKRI** (SARL, France), operating under the product brand **Neural ICE** —
+**TKRI** (SARL, France), operating under the product brand **Neural ICE**;
 website: <https://neural-ice.ch>
 
 ### What's the legal data that proves the organization's genuineness?
@@ -22,8 +22,8 @@ Subject: C=FR, ST=Île-de-France, L=Paris, O=TKRI, serialNumber=789990298, CN=TK
 ```
 
 (EV Code Signing certificate serial `1EBE4EFD89D56D6DEAB0508C9930468F`, valid
-2026-07-14 → 2027-07-14; the private key was generated on-device in a YubiKey
-5 FIPS PIV slot and attested at issuance — see the key-protection answer
+2026-07-14 to 2027-07-14; the private key was generated on-device in a YubiKey
+5 FIPS PIV slot and attested at issuance; see the key-protection answer
 below.)
 
 ### What product or service is this for?
@@ -47,7 +47,7 @@ that boots on factory Secure Boot on every unit without physical presence.
 
 ### Why are you unable to reuse shim from another distro that is already signed?
 
-Signed distro shims (Ubuntu, Fedora/CentOS, …) embed that distro's CA and
+Signed distro shims (Ubuntu, Fedora/CentOS, etc.) embed that distro's CA and
 therefore only verify binaries signed by that distro. Our kernel and GRUB2 are
 built and signed by us (custom GB10 kernel; the CentOS Stream shim is signed
 by the CentOS Secure Boot CA, which the DGX Spark firmware does not trust
@@ -78,13 +78,13 @@ and, before extraction, verifies its SHA256
 (`46319cd228d8f2c06c744241c0f342412329a7c630436fce7f82cf6936b1d603`), its
 SHA512, and its detached PGP signature against Peter Jones's release key
 (`pjones.asc` in this repo, fingerprint
-`B00B48BC731AA8840FED9FB0EED266B70F4FEF10`) — the build fails if any of the
+`B00B48BC731AA8840FED9FB0EED266B70F4FEF10`); the build fails if any of the
 three checks fails.
 
 ### URL for a repo that contains the exact code which was built to result in your binary:
 
 `https://github.com/Neural-ICE/shim-review` (tag
-`neuralice-shim-aarch64-20260722`) — contains the Dockerfile, the
+`neuralice-shim-aarch64-20260722`); it contains the Dockerfile, the
 vendor SBAT csv and the vendor certificate; the shim source itself is the
 unmodified 16.1 release tarball fetched and checksum-verified at build time.
 
@@ -112,15 +112,15 @@ signed by our leaf key (chaining to the CA embedded in shim).
 
 ### Do you have fixes for all the following GRUB2 CVEs applied?
 
-Yes — inherited from the CentOS Stream 10 `grub2` package (grub2-2.12-51.el10),
+Yes, inherited from the CentOS Stream 10 `grub2` package (grub2-2.12-51.el10),
 which contains the fixes for all listed CVEs through the February 2025 set.
 The upstream global SBAT generation in the built binary is **5**, which is the
-marker for the February 2025 CVE batch — confirming those fixes are present.
+marker for the February 2025 CVE batch, confirming those fixes are present.
 
 ### If shim is loading GRUB2 bootloader, and if these fixes have been applied, is the upstream global SBAT generation in your GRUB2 binary set to 5?
 
-Yes: `grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub/`
-— this is the real entry dumped verbatim from our final signed `grubaa64.efi`
+Yes: `grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub/`.
+This is the real entry dumped verbatim from our final signed `grubaa64.efi`
 (the missing colon in `https//` is present as-is in the CentOS Stream 10
 `sbat.csv.in`; we did not alter it). Full SBAT listing below.
 
@@ -132,7 +132,7 @@ no old shim hashes to provide.
 ### Does your new chain of trust disallow booting old GRUB2 builds affected by the CVEs?
 
 Yes. Our CA is new, so no GRUB2 build affected by the CVEs was ever signed by
-it — nothing older exists that could boot under this chain.
+it; nothing older exists that could boot under this chain.
 
 ### If your boot chain of trust includes a Linux kernel:
 ### Is upstream commit [1957a85b0032a81e6482ca4aab883643b8dae06e "efi: Restrict efivar_ssdt_load when the kernel is locked down"](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=1957a85b0032a81e6482ca4aab883643b8dae06e) applied?
@@ -166,12 +166,12 @@ kernel build; the NVIDIA open GPU kernel modules (out-of-tree, r595) are
 signed with that same key **within the same pipeline run**, after which the
 private key is destroyed. The corresponding public key is embedded in the
 kernel's built-in `.builtin_trusted_keys`, so each kernel build can only load
-modules signed for that exact build — one build's modules cannot be loaded by
+modules signed for that exact build: one build's modules cannot be loaded by
 another.
 
 ### If not, please describe how you ensure that one kernel build does not load modules built for another kernel.
 
-N/A — we do use an ephemeral per-build key (see above).
+N/A: we do use an ephemeral per-build key (see above).
 
 ### If you use vendor_db functionality of providing multiple certificates and/or hashes please briefly describe your certificate setup.
 
@@ -180,11 +180,11 @@ vendor_db, no allow-listed hashes.
 
 ### If there are allow-listed hashes please provide exact binaries for which hashes are created via file sharing service, available in public with anonymous access for verification.
 
-N/A — no allow-listed hashes are used.
+N/A: no allow-listed hashes are used.
 
 ### If you are re-using the CA certificate from your last shim binary, you will need to add the hashes of the previous GRUB2 binaries exposed to the CVEs mentioned earlier to vendor_dbx in shim. Please describe your strategy.
 
-First application, new CA certificate — no previously signed GRUB2 binaries
+First application, new CA certificate: no previously signed GRUB2 binaries
 exist, so no vendor_dbx entries are needed.
 
 ### Is the Dockerfile in your repository the recipe for reproducing the building of your shim binary?
@@ -206,7 +206,7 @@ toolchain/package installation and the tarball checksum verification), plus
 
 ### What changes were made in the distro's secure boot chain since your SHIM was last signed?
 
-First application — N/A.
+First application, N/A.
 
 ### What is the SHA256 hash of your final shim binary?
 
@@ -216,7 +216,8 @@ d03b4a4319daf5d3eb30d6e7b498ba2641a7f4bf48ec805692242aacfcd22f76  mmaa64.efi
 f7ffbfca88d49f9043ef98405b9dce9047d2e507a5640358eaeade2668c16bfa  fbaa64.efi
 ```
 
-(shim 16.1, vendor CA sha256 `44d0de0c…7803` embedded; two independent
+(shim 16.1, vendor CA sha256
+`44d0de0c42d1b38032f3a27fab290ea98bce9031bf10087ce548920f1b767803` embedded; two independent
 `--no-cache` container builds produced byte-identical binaries.)
 
 ### How do you manage and protect the keys used in your shim?
@@ -256,7 +257,7 @@ shim,4,UEFI shim,shim,1,https://github.com/rhboot/shim
 shim.neuralice,1,Neural ICE,shim,16.1,https://github.com/Neural-ICE/shim-review
 ```
 
-GRUB2 — real dump from our final signed `grubaa64.efi`
+GRUB2: real dump from our final signed `grubaa64.efi`
 (sha256 `a962080cc668b4ff60bd579eabac43a88fea11f5d040e3ff5688f1b4082391b8`,
 built from grub2-2.12-51.el10, upstream + Red Hat/CentOS entries preserved,
 ours appended; the signed binary itself is included in this repo as
@@ -269,14 +270,16 @@ grub.centos,2,Red Hat,grub2,2.12-51.el10,mailto:secalert@redhat.com
 grub.neuralice,1,Neural ICE,grub2,2.12-51.el10,https://github.com/Neural-ICE/shim-review
 ```
 The shim entries above are the **real dump from the final binary**
-(`shimaa64.efi` sha256 `d55327f1…e46c`, build 2026-07-16).
+(`shimaa64.efi` sha256
+`d55327f1810150de037910878c1c8f6d43db9057f4591d25e4bcede38ac9e46c`,
+build 2026-07-16).
 
 No other binaries are booted through shim (no fwupd EFI binary is shipped).
 
 ### If shim is loading GRUB2 bootloader, which modules are built into your signed GRUB2 image?
 
 The built-in module set is exactly that of the stock CentOS Stream 10
-`grub2-efi-aa64` package (we did not add or remove any module — only the SBAT
+`grub2-efi-aa64` package (we did not add or remove any module; only the SBAT
 csv was touched). Extracted from our signed binary:
 
 ```
@@ -291,7 +294,7 @@ search_fs_file search_fs_uuid search_label serial sleep test tftp video xfs
 
 ### If you are using systemd-boot on arm64 or riscv, is the fix for [unverified Devicetree Blob loading](https://github.com/systemd/systemd/security/advisories/GHSA-6m6p-rjcq-334c) included?
 
-N/A — we use GRUB2.
+N/A: we use GRUB2.
 
 ### What is the origin and full version number of your bootloader (GRUB2 or systemd-boot or other)?
 

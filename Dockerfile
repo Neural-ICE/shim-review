@@ -1,6 +1,6 @@
 # Reproducible build of shim 16.1 (aarch64) with the Neural ICE vendor CA.
 # Reviewers must be able to run `docker build .` and obtain a byte-identical
-# shimaa64.efi — hence the pinned base image and the cross toolchain (same
+# shimaa64.efi, hence the pinned base image and the cross toolchain (same
 # compiler package whether the host is x86_64 or aarch64).
 #
 # The build is self-verifying:
@@ -9,11 +9,11 @@
 #      release-signing key (pjones.asc, fingerprint
 #      B00B 48BC 731A A884 0FED 9FB0 EED2 66B7 0F4F EF10);
 #   2. the rebuilt binaries are compared byte-for-byte (sha256sum -c, cmp,
-#      full hexdump diff) against the binaries submitted in this repo — the
+#      full hexdump diff) against the binaries submitted in this repo; the
 #      build FAILS on any mismatch.
 #
 # Build context must contain:
-#   - neural-ice-uefi-ca.der   (vendor CA certificate, DER — from the key ceremony)
+#   - neural-ice-uefi-ca.der   (vendor CA certificate, DER, from the key ceremony)
 #   - sbat.neuralice.csv       (vendor SBAT entry)
 #   - pjones.asc               (shim release-signing public key)
 #   - SHA256SUMS, shimaa64.efi, mmaa64.efi, fbaa64.efi (submitted binaries)
@@ -70,7 +70,7 @@ RUN mkdir /out && cd shim-${SHIM_VERSION} && \
 # submitted in this repo. The build fails on any divergence.
 COPY SHA256SUMS /build/SHA256SUMS.submitted
 COPY shimaa64.efi mmaa64.efi fbaa64.efi /build/submitted/
-# (POSIX sh only — `podman build` in OCI format ignores SHELL and runs /bin/sh)
+# (POSIX sh only: `podman build` in OCI format ignores SHELL and runs /bin/sh)
 RUN cd /out \
     && sha256sum -c /build/SHA256SUMS.submitted \
     && for f in shimaa64.efi mmaa64.efi fbaa64.efi; do \

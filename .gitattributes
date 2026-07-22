@@ -1,4 +1,4 @@
-# Boot binaries and certificates are binary — never apply EOL/text conversion.
+# Boot binaries and certificates are binary; never apply EOL/text conversion.
 *.efi binary
 *.der binary
 *.asc -text
