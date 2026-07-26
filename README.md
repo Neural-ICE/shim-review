@@ -29,30 +29,39 @@ below.)
 ### What product or service is this for?
 
 Neural ICE CoreOS: the operating-system layer of the Neural ICE appliance, a
-sovereign on-premise AI inference appliance for Swiss and European enterprises,
-built on NVIDIA DGX Spark (GB10, aarch64) hardware. It is an image-based
-(bootc/ostree) OS derived from CentOS Stream 10, published as open core at
-<https://github.com/Neural-ICE/ICE-CoreOS>.
+sovereign on-premise AI inference appliance for Swiss and European
+enterprises. It is an image-based (bootc/ostree) OS derived from CentOS
+Stream 10, published as open core at
+<https://github.com/Neural-ICE/ICE-CoreOS>. This submission covers both
+appliance architectures: aarch64 (NVIDIA DGX Spark, GB10) and x86_64
+(generic UEFI server platforms with NVIDIA GPUs).
 
 ### What's the justification that this really does need to be signed for the whole world to be able to boot it?
 
 The appliance ships to customer premises with Secure Boot enabled as a
 non-negotiable security requirement, and installation/updates must be
-zero-touch (no human at the console, no per-unit key enrollment). The DGX
-Spark firmware trusts the Microsoft UEFI CAs. Our kernel is self-compiled
-(NVIDIA GB10/Grace-Blackwell enablement from Red Hat's `nvidia-gb10` tree, not
-yet available in any distribution kernel), so no existing distro-signed shim
-covers our chain. A Microsoft-signed shim embedding our CA is the only path
-that boots on factory Secure Boot on every unit without physical presence.
+zero-touch (no human at the console, no per-unit key enrollment). The target
+firmwares trust the Microsoft UEFI CAs. On both architectures the appliance
+requires the NVIDIA open GPU kernel modules, which no distribution builds or
+signs; under Secure Boot lockdown they can only load if the kernel trusts
+their signing key, so we rebuild the kernel so that the modules are signed
+by the kernel's own ephemeral per-build key. On aarch64 the kernel is in any
+case self-compiled (NVIDIA GB10/Grace-Blackwell enablement from Red Hat's
+`nvidia-gb10` tree, not yet available in any distribution kernel). No
+existing distro-signed shim therefore covers our chain, and MOK enrollment
+would require per-unit physical presence. A Microsoft-signed shim embedding
+our CA is the only path that boots on factory Secure Boot on every unit
+without physical presence.
 
 ### Why are you unable to reuse shim from another distro that is already signed?
 
 Signed distro shims (Ubuntu, Fedora/CentOS, etc.) embed that distro's CA and
-therefore only verify binaries signed by that distro. Our kernel and GRUB2 are
-built and signed by us (custom GB10 kernel; the CentOS Stream shim is signed
-by the CentOS Secure Boot CA, which the DGX Spark firmware does not trust
-anyway). MOK enrollment through another distro's shim requires physical
-presence per unit, which violates the appliance's zero-touch requirement.
+therefore only verify binaries signed by that distro. Our kernels and GRUB2
+are built and signed by us (custom GB10 kernel on aarch64; on x86_64 the
+kernel is rebuilt so that the NVIDIA open GPU modules are signed by its
+ephemeral per-build key), which no distro shim trusts. MOK enrollment
+through another distro's shim requires physical presence per unit, which
+violates the appliance's zero-touch requirement.
 
 ### Who is the primary contact for security updates, etc.?
 
@@ -84,7 +93,7 @@ three checks fails.
 ### URL for a repo that contains the exact code which was built to result in your binary:
 
 `https://github.com/Neural-ICE/shim-review` (tag
-`neuralice-shim-aarch64-20260722`); it contains the Dockerfile, the
+`neuralice-shim-aarch64-x64-20260726`); it contains the Dockerfile, the
 vendor SBAT csv and the vendor certificate; the shim source itself is the
 unmodified 16.1 release tarball fetched and checksum-verified at build time.
 
@@ -95,11 +104,11 @@ None. Vanilla shim 16.1; the only build inputs are `VENDOR_CERT_FILE`
 
 ### Do you have the NX bit set in your shim? If so, is your entire boot stack NX-compatible and what testing have you done to ensure such compatibility?
 
-No, the NX bit is not set (confirmed on the final build: `post-process-pe`
-reports "NX Compatibility flag is not set" for shim, MokManager and fallback).
-Our boot stack (GRUB2 from CentOS Stream 10, kernel 6.12 aarch64) follows
-current Fedora/CentOS practice, which has not yet declared full NX
-compatibility.
+No, the NX bit is not set (confirmed on the final builds: `post-process-pe`
+reports "NX Compatibility flag is not set" for shim, MokManager and fallback
+on both architectures). Our boot stack (GRUB2 from CentOS Stream 10, kernel
+6.12) follows current Fedora/CentOS practice, which has not yet declared
+full NX compatibility.
 
 ### What exact implementation of Secure Boot in GRUB2 do you have? (Either Upstream GRUB2 shim_lock verifier or Downstream RHEL/Fedora/Debian/Canonical-like implementation)
 
@@ -108,7 +117,8 @@ CentOS Stream 10 `grub2` source package **grub2-2.12-51.el10** (which carries
 the Red Hat downstream Secure Boot/lockdown verifier patch set), with our
 vendor SBAT entry appended (one line added to the package's `sbat.csv.in`; the
 module set and all patches are unchanged) and the resulting `grubaa64.efi`
-signed by our leaf key (chaining to the CA embedded in shim).
+and `grubx64.efi` signed by our leaf key (chaining to the CA embedded in
+shim).
 
 ### Do you have fixes for all the following GRUB2 CVEs applied?
 
@@ -139,33 +149,43 @@ it; nothing older exists that could boot under this chain.
 ### Is upstream commit [75b0cea7bf307f362057cc778efe89af4c615354 "ACPI: configfs: Disallow loading ACPI tables when locked down"](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=75b0cea7bf307f362057cc778efe89af4c615354) applied?
 ### Is upstream commit [eadb2f47a3ced5c64b23b90fd2a3463f63726066 "lockdown: also lock down previous kgdb use"](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=eadb2f47a3ced5c64b23b90fd2a3463f63726066) applied?
 
-Yes to all three. Our kernel is 6.12-based (el10, Red Hat `nvidia-gb10` tree);
-these commits are upstream since v5.4, v5.8 and v5.19 respectively and are
-present in the 6.12 source.
+Yes to all three. Both kernels are 6.12-based (el10): Red Hat's `nvidia-gb10`
+tree on aarch64 and the CentOS Stream 10 kernel (kernel-6.12.0-250.el10) on
+x86_64; these commits are upstream since v5.4, v5.8 and v5.19 respectively
+and are present in the 6.12 source.
 
 ### How does your signed kernel enforce lockdown when your system runs with Secure Boot enabled?
 
-The kernel carries the RHEL downstream mechanism that enables integrity-mode
+Both kernels carry the RHEL downstream mechanism that enables integrity-mode
 lockdown automatically when booted with Secure Boot enabled. Verified on the
-target hardware (DGX Spark, SB on): `/sys/kernel/security/lockdown` reports
-`none [integrity] confidentiality`. Unsigned module loading is denied by
-module signature enforcement under lockdown.
+aarch64 target hardware (DGX Spark, SB on) and, for x86_64, by booting the
+full signed chain under QEMU/OVMF with Secure Boot enabled and our
+certificates enrolled in `db`: `/sys/kernel/security/lockdown` reports
+`none [integrity] confidentiality` in both cases. Unsigned module loading is
+denied by module signature enforcement under lockdown.
 
 ### Do you build your signed kernel with additional local patches? What do they do?
 
-The kernel is built from Red Hat's public `nvidia-gb10` tree
+aarch64: the kernel is built from Red Hat's public `nvidia-gb10` tree
 (<https://gitlab.com/redhat/edge/kernel/nvidia-gb10>), i.e. a RHEL-10 6.12
-kernel plus NVIDIA GB10 (Grace-Blackwell) hardware-enablement patches. We add
-no patches of our own on top, and nothing touches Secure Boot, lockdown or
-module-signing behavior.
+kernel plus NVIDIA GB10 (Grace-Blackwell) hardware-enablement patches; we
+add no patches of our own on top. x86_64: the kernel source is the
+unmodified CentOS Stream 10 kernel (kernel-6.12.0-250.el10 SRPM); no patches
+at all. On both architectures our only change is to the RPM spec, which
+additionally builds the NVIDIA open GPU modules inside the same kernel build
+so that they are signed by the ephemeral per-build key. Nothing touches
+Secure Boot, lockdown or module-signing behavior.
 
 ### Do you use an ephemeral key for signing kernel modules?
 
 Yes. The module signing key (`certs/signing_key.pem`) is generated during the
 kernel build; the NVIDIA open GPU kernel modules (out-of-tree, r595) are
 signed with that same key **within the same pipeline run**, after which the
-private key is destroyed. The corresponding public key is embedded in the
-kernel's built-in `.builtin_trusted_keys`, so each kernel build can only load
+private key is destroyed. We verified on the final packages of both
+architectures that the NVIDIA modules and the in-tree modules carry the same
+signing key id (`modinfo -F sig_key` is identical). The corresponding public
+key is embedded in the kernel's built-in `.builtin_trusted_keys`, so each
+kernel build can only load
 modules signed for that exact build: one build's modules cannot be loaded by
 another.
 
@@ -189,20 +209,22 @@ exist, so no vendor_dbx entries are needed.
 
 ### Is the Dockerfile in your repository the recipe for reproducing the building of your shim binary?
 
-Yes. `docker build .` (or `podman build`) reproduces the exact binaries: the
-base image is tag-pinned (`debian:12.11`), the toolchain is Debian 12's
-`gcc-aarch64-linux-gnu`, and the shim tarball is verified (SHA256 + SHA512 +
+Yes. `docker build .` (or `podman build`) reproduces the exact binaries for
+**both architectures** in a single build: the base image is tag-pinned
+(`debian:12.11`), the toolchains are Debian 12's `gcc-aarch64-linux-gnu` and
+`gcc-x86-64-linux-gnu`, and the shim tarball is verified (SHA256 + SHA512 +
 PGP) before use. The build is self-verifying: the final layer compares the
-rebuilt binaries byte-for-byte (`sha256sum -c`, `cmp` and a full hexdump
+six rebuilt binaries byte-for-byte (`sha256sum -c`, `cmp` and a full hexdump
 diff) against the binaries submitted in this repo and **fails on any
 mismatch**, so a successful build is itself the reproducibility proof.
 
 ### Which files in this repo are the logs for your build?
 
-`make-build.log` (full `make` output inside the container) and
-`podman-build.log` (the complete `podman build --no-cache` output, including
-toolchain/package installation and the tarball checksum verification), plus
-`SHA256SUMS` for the produced binaries.
+`make-build-aarch64.log` and `make-build-x86_64.log` (full `make` output
+inside the container for each architecture) and `podman-build.log` (the
+complete `podman build --no-cache` output, including toolchain/package
+installation, the tarball checksum and PGP verification, and the final
+self-verification layer), plus `SHA256SUMS` for the six produced binaries.
 
 ### What changes were made in the distro's secure boot chain since your SHIM was last signed?
 
@@ -214,11 +236,15 @@ First application, N/A.
 d55327f1810150de037910878c1c8f6d43db9057f4591d25e4bcede38ac9e46c  shimaa64.efi
 d03b4a4319daf5d3eb30d6e7b498ba2641a7f4bf48ec805692242aacfcd22f76  mmaa64.efi
 f7ffbfca88d49f9043ef98405b9dce9047d2e507a5640358eaeade2668c16bfa  fbaa64.efi
+85648bf05274bcc549d86ec240820ccff4cd65abfef4047abf7d7b82c2e538fb  shimx64.efi
+84682faac55577f55ef44e1dc1e47d1de678aa30efeb68941118b1e563b87f15  mmx64.efi
+09619a195c5c655b9bd2d19ad527594a6d5d79777d2ecf055041e82b5a5bd003  fbx64.efi
 ```
 
 (shim 16.1, vendor CA sha256
 `44d0de0c42d1b38032f3a27fab290ea98bce9031bf10087ce548920f1b767803` embedded; two independent
-`--no-cache` container builds produced byte-identical binaries.)
+`--no-cache` container builds produced byte-identical binaries on each
+architecture.)
 
 ### How do you manage and protect the keys used in your shim?
 
@@ -250,18 +276,22 @@ Yes, and it carries `X509v3 Basic Constraints: critical, CA:TRUE`
 ### Do you add a vendor-specific SBAT entry to the SBAT section in each binary that supports SBAT metadata ( GRUB2, fwupd, fwupdate, systemd-boot, systemd-stub, shim + all child shim binaries )?
 ### Please provide the exact SBAT entries for all binaries you are booting directly through shim.
 
-Yes. Shim (`objcopy --only-section .sbat -O binary shimaa64.efi /dev/stdout`):
+Yes. Shim (identical `.sbat` section in `shimaa64.efi` and `shimx64.efi`;
+dump via `objcopy --only-section .sbat -O binary`):
 ```
 sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
 shim,4,UEFI shim,shim,1,https://github.com/rhboot/shim
 shim.neuralice,1,Neural ICE,shim,16.1,https://github.com/Neural-ICE/shim-review
 ```
 
-GRUB2: real dump from our final signed `grubaa64.efi`
-(sha256 `a962080cc668b4ff60bd579eabac43a88fea11f5d040e3ff5688f1b4082391b8`,
+GRUB2: real dump from our final signed GRUB2 binaries, identical on both
+architectures (`grubaa64.efi` sha256
+`a962080cc668b4ff60bd579eabac43a88fea11f5d040e3ff5688f1b4082391b8` and
+`grubx64.efi` sha256
+`cedd2c1390c11cda16f19152f55a6e34ca43b2f8f73222fd7ab451d4278c87bf`, both
 built from grub2-2.12-51.el10, upstream + Red Hat/CentOS entries preserved,
-ours appended; the signed binary itself is included in this repo as
-`grubaa64.efi` so the dump and signature can be verified independently):
+ours appended; the signed binaries themselves are included in this repo so
+the dumps and signatures can be verified independently):
 ```
 sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
 grub,5,Free Software Foundation,grub,2.12,https//www.gnu.org/software/grub/
@@ -269,18 +299,21 @@ grub.rh,2,Red Hat,grub2,2.12-51.el10,mailto:secalert@redhat.com
 grub.centos,2,Red Hat,grub2,2.12-51.el10,mailto:secalert@redhat.com
 grub.neuralice,1,Neural ICE,grub2,2.12-51.el10,https://github.com/Neural-ICE/shim-review
 ```
-The shim entries above are the **real dump from the final binary**
+The shim entries above are the **real dump from the final binaries**
 (`shimaa64.efi` sha256
-`d55327f1810150de037910878c1c8f6d43db9057f4591d25e4bcede38ac9e46c`,
-build 2026-07-16).
+`d55327f1810150de037910878c1c8f6d43db9057f4591d25e4bcede38ac9e46c` and
+`shimx64.efi` sha256
+`85648bf05274bcc549d86ec240820ccff4cd65abfef4047abf7d7b82c2e538fb`).
 
 No other binaries are booted through shim (no fwupd EFI binary is shipped).
 
 ### If shim is loading GRUB2 bootloader, which modules are built into your signed GRUB2 image?
 
-The built-in module set is exactly that of the stock CentOS Stream 10
-`grub2-efi-aa64` package (we did not add or remove any module; only the SBAT
-csv was touched). Extracted from our signed binary:
+The built-in module sets are exactly those of the stock CentOS Stream 10
+`grub2-efi-aa64` and `grub2-efi-x64` packages (we did not add or remove any
+module; only the SBAT csv was touched).
+
+aarch64 (extracted from our signed binary):
 
 ```
 all_video blscfg boot cat configfile echo efifwsetup efinet ext2 fat font
@@ -290,6 +323,20 @@ gzio halt hfsplus http increment iso9660 jpeg linux loadenv loopback lsefi
 lsefimmap luks luks2 lvm mdraid09 mdraid1x memdisk minicmd net normal
 part_apple part_gpt part_msdos password_pbkdf2 pgp png reboot regexp search
 search_fs_file search_fs_uuid search_label serial sleep test tftp video xfs
+```
+
+x86_64 (as defined by the package build, GRUB_MODULES):
+
+```
+all_video at_keyboard backtrace bli blscfg blsuki boot cat chain configfile
+connectefi cryptodisk echo efifwsetup efinet efi_netfs ext2 f2fs fat font
+gcry_rijndael gcry_rsa gcry_serpent gcry_sha256 gcry_twofish gcry_whirlpool
+gfxmenu gfxterm gzio halt hfsplus http increment iso9660 jpeg keylayouts
+linux loadenv loopback lsefi lsefimmap luks luks2 lvm mdraid09 mdraid1x
+memdisk minicmd net normal part_apple part_gpt part_msdos password_pbkdf2
+pgp png reboot regexp search search_fs_file search_fs_uuid search_label
+serial sleep squash4 syslinuxcfg test tftp tpm usb usbserial_common
+usbserial_ftdi usbserial_pl2303 usbserial_usbdebug version video xfs zstd
 ```
 
 ### If you are using systemd-boot on arm64 or riscv, is the fix for [unverified Devicetree Blob loading](https://github.com/systemd/systemd/security/advisories/GHSA-6m6p-rjcq-334c) included?
@@ -327,11 +374,13 @@ Secure Boot is active, and we ship no configuration that bypasses it.
 
 ### What kernel are you using? Which patches and configuration does it include to enforce Secure Boot?
 
-Kernel 6.12 (el10) from Red Hat's public `nvidia-gb10` tree, standard 4k-page
-aarch64 flavor, RHEL configuration: `CONFIG_SECURITY_LOCKDOWN_LSM(_EARLY)=y`,
-module signature enforcement, and the RHEL mechanism enabling
-lockdown-integrity under Secure Boot (verified on hardware). NVIDIA GB10
-enablement patches only; no Secure Boot-related modifications.
+Both kernels are 6.12 (el10) with the RHEL configuration:
+`CONFIG_SECURITY_LOCKDOWN_LSM(_EARLY)=y`, module signature enforcement, and
+the RHEL mechanism enabling lockdown-integrity under Secure Boot. aarch64:
+Red Hat's public `nvidia-gb10` tree, standard 4k-page flavor, NVIDIA GB10
+enablement patches only (verified on hardware). x86_64: the unmodified
+CentOS Stream 10 kernel-6.12.0-250.el10 (verified under QEMU/OVMF Secure
+Boot). No Secure Boot-related modifications on either architecture.
 
 ### What contributions have you made to help us review the applications of other applicants?
 
@@ -349,8 +398,23 @@ We intend to keep reviewing open submissions while ours is in the queue.
 
 ### Add any additional information you think we may need to validate this shim signing application.
 
-Target hardware is the NVIDIA DGX Spark (GB10). Its firmware db ships both
-`Microsoft Corporation UEFI CA 2011` and `Microsoft UEFI CA 2023` (verified on
-hardware), so the 2023-signed aarch64 shim boots without enrollment. The OS is
-an open-core CentOS Stream 10 bootc derivative; the full boot-chain build is
-public at <https://github.com/Neural-ICE/ICE-CoreOS>.
+This submission covers both appliance architectures; it originally covered
+aarch64 only, and the x86_64 binaries were merged in from
+[#576](https://github.com/rhboot/shim-review/issues/576) at the reviewers'
+request.
+
+Target hardware, aarch64: the NVIDIA DGX Spark (GB10). Its firmware db ships
+both `Microsoft Corporation UEFI CA 2011` and `Microsoft UEFI CA 2023`
+(verified on hardware), so the 2023-signed shim boots without enrollment.
+The chain was verified on this hardware with Secure Boot on.
+
+Target hardware, x86_64: generic UEFI server platforms whose firmware db
+carries the Microsoft UEFI CA 2023. The full signed x86_64 chain (shim,
+GRUB2, kernel, NVIDIA modules signed by the ephemeral key) was boot-tested
+under QEMU/OVMF with Secure Boot enabled and our certificates enrolled in
+db: the chain verifies, the kernel locks down
+(`none [integrity] confidentiality`), and the NVIDIA module's ephemeral
+signature is accepted by the locked-down kernel.
+
+The OS is an open-core CentOS Stream 10 bootc derivative; the full
+boot-chain build is public at <https://github.com/Neural-ICE/ICE-CoreOS>.
